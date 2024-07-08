@@ -6,16 +6,16 @@
 настройки электронной почты, конфигурацию статических файлов и
 другие настройки, необходимые для корректной работы проекта.
 """
-
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-by!0d_0d#ialeidl_r1h*)1p%!-*vl^g-)y-9^1#l(1rsbb4k&'
+SECRET_KEY = os.getenv('SECRET_KEY', 'some_key')
 
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False')
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 AUTH_USER_MODEL = 'recipes.User'
 
@@ -26,8 +26,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_filters',
+    'rest_framework',
+    'rest_framework.authtoken',
     'recipes',
-    'api'
+    'api',
+    'urlshortner',
 ]
 
 MIDDLEWARE = [
@@ -97,7 +101,33 @@ USE_TZ = True
 
 
 STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'collected_static'
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 USER_PROFILE_URL = 'me'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PAGINATION_CLASS':
+        'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 6,
+}
+
+DJOSER = {
+    'HIDE_USERS': False,
+    'PERMISSIONS': {
+        'user': ['djoser.permissions.CurrentUserOrAdminOrReadOnly'],
+        'user_list': ['rest_framework.permissions.AllowAny'],
+    },
+}

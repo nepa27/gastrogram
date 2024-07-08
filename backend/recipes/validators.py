@@ -16,7 +16,7 @@ class ValidateUsername:
                 (f'Использовать имя {settings.USER_PROFILE_URL} '
                  'в качестве username запрещено!')
             )
-        matching_chars = re.findall(r'^[\w.@+-]+\z', username)
+        matching_chars = re.findall(r'[^\w.@+-]+', username)
         if matching_chars:
             ''.join(set(matching_chars))
             raise ValidationError(
@@ -27,3 +27,13 @@ class ValidateUsername:
 
     def __call__(self, value):
         return self.validate_username(value)
+
+
+def validate_slug(slug):
+    pattern = r'^[-a-zA-Z0-9_]+$'
+    if not re.match(pattern, slug):
+        raise ValueError(
+            'Недопустимое название Slug! '
+            'Слаг может содержать только целые числа, '
+            'буквы или подчеркивания.'
+        )
