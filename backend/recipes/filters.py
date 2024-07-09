@@ -7,16 +7,6 @@ from .models import (
 )
 
 
-class IngredientFilter(FilterSet):
-    name = filters.CharFilter(
-        lookup_expr='startswith'
-    )
-
-    class Meta:
-        model = Ingredient
-        fields = ('name',)
-
-
 class RecipeFilter(FilterSet):
 
     tags = filters.ModelMultipleChoiceFilter(
@@ -24,7 +14,6 @@ class RecipeFilter(FilterSet):
         to_field_name='slug',
         queryset=Tag.objects.all(),
     )
-
     is_favorited = filters.BooleanFilter(
         method='filter_is_favorited'
     )
@@ -50,3 +39,18 @@ class RecipeFilter(FilterSet):
         if value and not user.is_anonymous:
             return queryset.filter(shopping_cart__user=user)
         return queryset
+
+
+class IngredientFilter(FilterSet):
+    name = filters.CharFilter(
+        lookup_expr='startswith'
+    )
+
+    class Meta:
+        model = Ingredient
+        fields = (
+            'name',
+        )
+
+
+
