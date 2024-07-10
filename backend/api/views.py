@@ -238,7 +238,7 @@ class RecipeViewSet(ModelViewSet):
     )
     def get_link(self, request, pk=None):
         get_object_or_404(Recipe, id=pk)
-        domain = os.getenv('ALLOWED_HOSTS').split()[3]
+        domain = os.getenv('DOMAIN')
         long_url = f'https://{domain}/api/recipes/recipes/{pk}/'
         domain_prefix = f'https://{domain}/s/'
         short_link = shorten_url(long_url, is_permanent=True)

@@ -294,8 +294,7 @@ function App() {
             </Route>
 
             <Route exact path="/about">
-              <NotFound />
-              {/* <About component={About} /> */}
+              <About component={About} />
             </Route>
 
             <Route exact path="/reset-password">
@@ -303,8 +302,7 @@ function App() {
             </Route>
 
             <Route exact path="/technologies">
-              <NotFound />
-              {/* <Technologies component={Technologies}/> */}
+              <Technologies component={Technologies}/>
             </Route>
 
             <Route exact path="/recipes">
