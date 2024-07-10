@@ -51,6 +51,3 @@ class IngredientFilter(FilterSet):
         fields = (
             'name',
         )
-
-
-
