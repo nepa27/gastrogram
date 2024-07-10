@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.core.exceptions import BadRequest
 from django.db.models import Sum
@@ -236,8 +238,9 @@ class RecipeViewSet(ModelViewSet):
     )
     def get_link(self, request, pk=None):
         get_object_or_404(Recipe, id=pk)
-        long_url = f'http://127.0.0.1:8000/api/recipes/recipes/{pk}/'
-        domain_prefix = 'http://127.0.0.1:8000/s/'
+        domain = os.getenv('ALLOWED_HOSTS').split()[3]
+        long_url = f'https://{domain}/api/recipes/recipes/{pk}/'
+        domain_prefix = f'https://{domain}/s/'
         short_link = shorten_url(long_url, is_permanent=True)
         return Response(
             {'short-link': domain_prefix + short_link}
