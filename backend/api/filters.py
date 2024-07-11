@@ -1,3 +1,4 @@
+"""Модуль, определяющий фильтры для конечной точки API."""
 from django_filters.rest_framework import FilterSet, filters
 
 from .models import (
@@ -8,6 +9,7 @@ from .models import (
 
 
 class RecipeFilter(FilterSet):
+    """Фильтр для модели Recipe, используемый в конечной точке API."""
 
     tags = filters.ModelMultipleChoiceFilter(
         field_name='tags__slug',
@@ -29,12 +31,14 @@ class RecipeFilter(FilterSet):
         )
 
     def filter_is_favorited(self, queryset, name, value):
+        """Фильтр для избранного."""
         user = self.request.user
         if value and not user.is_anonymous:
             return queryset.filter(favorites__user=user)
         return queryset
 
     def filter_is_in_shopping_cart(self, queryset, name, value):
+        """Фильтр для корзины покупок."""
         user = self.request.user
         if value and not user.is_anonymous:
             return queryset.filter(shopping_cart__user=user)
@@ -42,6 +46,8 @@ class RecipeFilter(FilterSet):
 
 
 class IngredientFilter(FilterSet):
+    """Фильтр для модели Ingredient, используемый в конечной точке API."""
+
     name = filters.CharFilter(
         lookup_expr='startswith'
     )

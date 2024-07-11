@@ -1,3 +1,10 @@
+"""
+Модуль, содержащий View для обработки запросов к API.
+
+Этот модуль содержит классы View, предназначенных для обработки HTTP-запросов
+к API для моделей User, FavoriteRecipe, Ingredient, Recipe,RecipeIngredient,
+ShoppingCart, Subscription, Tag.
+"""
 import os
 
 from django.conf import settings
@@ -20,16 +27,16 @@ from .serializers import (
     IngredientSerializer,
     MyUserSerializer,
     UserAvatarSerializer,
-    RecipeFullSerializer,
+    RecipeCreateUpdateSerializer,
     RecipePartialSerializer,
-    RecipeSerializer,
+    RecipeReadSerializer,
     ShoppingCartSerializer,
     SubscriptionSerializer,
     TagSerializer,
     UserSubscriptionSerializer,
 )
-from .viewset import CustomPagination
-from recipes.filters import IngredientFilter, RecipeFilter
+from .viewset import BasePagination
+from .filters import IngredientFilter, RecipeFilter
 from recipes.models import (
     User,
     FavoriteRecipe,
@@ -43,14 +50,21 @@ from recipes.models import (
 
 
 class BaseUserViewSet(UserViewSet):
+    """
+    ViewSet для работы с пользователями.
+
+    Предоставляет методы для работы с профилем
+    пользователя, аватаром и подписками.
+    """
+
     queryset = User.objects.all()
     serializer_class = MyUserSerializer
     permission_classes = (AdminOrReadOnly,)
-    pagination_class = CustomPagination
+    pagination_class = BasePagination
 
     @action(
         detail=False,
-        methods=['get', 'patch'],
+        methods=('GET', 'PATCH'),
         url_path=settings.USER_PROFILE_URL,
         url_name=settings.USER_PROFILE_URL,
         permission_classes=(IsAuthenticated,)
@@ -80,12 +94,13 @@ class BaseUserViewSet(UserViewSet):
         )
 
     @action(
-        methods=['put', 'delete'],
+        methods=('PUT', 'DELETE'),
         detail=False,
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar'
     )
     def avatar(self, request):
+        """Метод для работы с аватаром."""
         if request.method == 'DELETE':
             request.user.avatar = None
             request.user.save()
@@ -106,10 +121,11 @@ class BaseUserViewSet(UserViewSet):
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=('POST', 'DELETE'),
         permission_classes=(IsAuthenticated,)
     )
     def subscribe(self, request, id):
+        """Метод для управления подписками."""
         author = get_object_or_404(
             User,
             id=id
@@ -145,10 +161,11 @@ class BaseUserViewSet(UserViewSet):
 
     @action(
         detail=False,
-        methods=['get'],
+        methods=('GET',),
         permission_classes=(IsAuthenticated,)
     )
     def subscriptions(self, request):
+        """Метод для отображения подписок."""
         authors = User.objects.filter(
             author__follower=request.user
         )
@@ -164,6 +181,8 @@ class BaseUserViewSet(UserViewSet):
 
 
 class IngredientViewSet(ReadOnlyModelViewSet):
+    """ViewSet для работы с ингредиентами."""
+
     queryset = Ingredient.objects.all()
     serializer_class = IngredientSerializer
     pagination_class = None
@@ -172,41 +191,53 @@ class IngredientViewSet(ReadOnlyModelViewSet):
 
 
 class TagViewSet(ReadOnlyModelViewSet):
+    """ViewSet для работы с тегами."""
+
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
     pagination_class = None
 
 
 class RecipeViewSet(ModelViewSet):
+    """
+    ViewSet для работы с рецептами.
+
+    Предоставляет методы для создания, обновления и удаления рецептов,
+    а также для работы с избранными рецептами и списком покупок.
+    """
+
     queryset = Recipe.objects.all()
-    serializer_class = RecipeFullSerializer
+    serializer_class = RecipeCreateUpdateSerializer
     permission_classes = (AuthorOrReadOnly, )
     filter_backends = (DjangoFilterBackend,)
     filterset_class = RecipeFilter
-    pagination_class = CustomPagination
+    pagination_class = BasePagination
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=('POST', 'DELETE'),
         permission_classes=(IsAuthenticated,)
     )
     def favorite(self, request, pk):
+        """Метод для управления избранными подписками."""
         if request.method == 'POST':
             return self.add_to(FavoriteSerializer, request, pk)
         return self.delete_from(FavoriteRecipe, request, pk)
 
     @action(
         detail=True,
-        methods=['post', 'delete'],
+        methods=('POST', 'DELETE'),
         permission_classes=(IsAuthenticated,)
     )
     def shopping_cart(self, request, pk):
+        """Метод для управления списком покупок."""
         if request.method == 'POST':
             return self.add_to(ShoppingCartSerializer, request, pk)
         return self.delete_from(ShoppingCart, request, pk)
 
     @staticmethod
     def ingredients_to_txt(ingredients):
+        """Метод для объединения ингредиентов в список для загрузки."""
         shopping_cart = [
             f"{ingredient['ingredient__name']} - "
             f"{ingredient['sum']}"
@@ -216,10 +247,12 @@ class RecipeViewSet(ModelViewSet):
 
     @action(
         detail=False,
-        methods=('get',),
+        methods=('GET',),
         permission_classes=(IsAuthenticated,)
     )
     def download_shopping_cart(self, request):
+        """Метод для загрузки ингредиентов и их количества
+         для выбранных рецептов."""
         ingredients = RecipeIngredient.objects.filter(
             recipe__shopping_cart__user=request.user
         ).values(
@@ -237,6 +270,7 @@ class RecipeViewSet(ModelViewSet):
         url_path='get-link'
     )
     def get_link(self, request, pk=None):
+        """Метод для получения короткой ссылки."""
         get_object_or_404(Recipe, id=pk)
         domain = os.getenv('DOMAIN')
         long_url = f'https://{domain}/api/recipes/recipes/{pk}/'
@@ -248,6 +282,7 @@ class RecipeViewSet(ModelViewSet):
 
     @staticmethod
     def add_to(current_serializer, request, pk):
+        """Метод для добавления рецептов."""
         recipe = get_object_or_404(
             Recipe,
             pk=pk
@@ -268,6 +303,7 @@ class RecipeViewSet(ModelViewSet):
 
     @staticmethod
     def delete_from(model, request, pk):
+        """Метод для удаления рецептов."""
         recipe = get_object_or_404(
             Recipe,
             pk=pk
@@ -285,6 +321,7 @@ class RecipeViewSet(ModelViewSet):
         )
 
     def get_serializer_class(self):
+        """Выбор сериализатора по методу запроса."""
         if self.request.method == 'GET':
-            return RecipeSerializer
-        return RecipeFullSerializer
+            return RecipeReadSerializer
+        return RecipeCreateUpdateSerializer

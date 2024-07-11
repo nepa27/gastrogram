@@ -181,6 +181,7 @@ class Ingredient(models.Model):
 
 
 class RecipeIngredient(models.Model):
+    """Промежуточная модель для рецептов и ингредиентов."""
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
@@ -217,6 +218,7 @@ class RecipeIngredient(models.Model):
         ]
 
     def __str__(self):
+        """Возвращает строковое представление объекта ингредиента в рецепте."""
         return (f'{self.ingredient[:MAX_LENGTH_FOR_STR]} '
                 f'в рецепте "{self.recipe[:MAX_LENGTH_FOR_STR]}"')
 

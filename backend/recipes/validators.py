@@ -10,6 +10,7 @@ from django.utils.deconstruct import deconstructible
 
 @deconstructible
 class ValidateUsername:
+    """Валидация имени пользователя."""
     def validate_username(self, username):
         """Проверка имени пользователя на соответствие шаблону."""
         if username == settings.USER_PROFILE_URL:
@@ -31,6 +32,7 @@ class ValidateUsername:
 
 
 def validate_slug(slug):
+    """Проверка слага на соответствие шаблону."""
     pattern = r'^[-a-zA-Z0-9_]+$'
     if not re.match(pattern, slug):
         raise ValueError(
