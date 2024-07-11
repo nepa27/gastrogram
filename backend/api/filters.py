@@ -1,7 +1,7 @@
 """Модуль, определяющий фильтры для конечной точки API."""
 from django_filters.rest_framework import FilterSet, filters
 
-from .models import (
+from recipes.models import (
     Ingredient,
     Recipe,
     Tag
