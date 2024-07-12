@@ -273,7 +273,7 @@ class RecipeViewSet(ModelViewSet):
         """Метод для получения короткой ссылки."""
         get_object_or_404(Recipe, id=pk)
         domain = os.getenv('DOMAIN')
-        long_url = f'https://{domain}/api/recipes/recipes/{pk}/'
+        long_url = f'https://{domain}/recipes/{pk}/'
         domain_prefix = f'https://{domain}/s/'
         short_link = shorten_url(long_url, is_permanent=True)
         return Response(
