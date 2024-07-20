@@ -1,9 +1,10 @@
 """Модуль, определяющий модели для приложения рецептов."""
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 
-from .validators import ValidateUsername, validate_slug
+from .validators import ValidateUsername
 from recipes_backend.constants import (
     MAX_LENGTH_EMAIL_ADDRESS,
     MAX_LENGTH_FIRST_NAME,
@@ -22,32 +23,32 @@ from recipes_backend.constants import (
 class User(AbstractUser):
     """Модель пользователя приложения."""
 
+    USERNAME_FIELD = 'email'
     username = models.CharField(
-        verbose_name='Имя пользователя',
+        'Имя пользователя',
         unique=True,
         max_length=MAX_LENGTH_USERNAME,
-        validators=[ValidateUsername()],
+        validators=(ValidateUsername(),),
     )
     email = models.EmailField(
-        verbose_name='Электронная почта',
+        'Электронная почта',
         unique=True,
         max_length=MAX_LENGTH_EMAIL_ADDRESS,
     )
     first_name = models.CharField(
-        verbose_name='Имя',
+        'Имя',
         max_length=MAX_LENGTH_FIRST_NAME,
     )
     last_name = models.CharField(
-        verbose_name='Фамилия',
+        'Фамилия',
         max_length=MAX_LENGTH_LAST_NAME,
     )
 
     avatar = models.ImageField(
-        verbose_name='Аватар',
+        'Аватар',
         upload_to='avatars/',
     )
 
-    USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = (
         'username',
         'first_name',
@@ -56,15 +57,9 @@ class User(AbstractUser):
     )
 
     class Meta:
+        ordering = ('id',)
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
-        default_related_name = 'users'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['username', 'email'],
-                name='unique_username_email'
-            )
-        ]
 
     def __str__(self):
         """Возвращает строковое представление объекта пользователя."""
@@ -80,15 +75,15 @@ class Recipe(models.Model):
         on_delete=models.CASCADE
     )
     name = models.CharField(
-        verbose_name='Название',
+        'Название',
         max_length=MAX_LENGTH_NAME
     )
     image = models.ImageField(
-        verbose_name='Картинка рецепта',
+        'Картинка рецепта',
         upload_to='media/',
     )
     text = models.TextField(
-        verbose_name='Описание'
+        'Описание',
     )
     ingredients = models.ManyToManyField(
         'Ingredient',
@@ -100,19 +95,23 @@ class Recipe(models.Model):
         'Tag',
         verbose_name='Теги'
     )
-    cooking_time = models.IntegerField(
-        verbose_name='Время приготовления (в минутах)',
-        validators=[
+    cooking_time = models.PositiveSmallIntegerField(
+        'Время приготовления (в минутах)',
+        validators=(
             MinValueValidator(
-                MIN_COOKING_TIME
+                MIN_COOKING_TIME,
+                message='Минимальное время приготовления '
+                        f'- {MIN_COOKING_TIME} мин.'
             ),
             MaxValueValidator(
                 MAX_COOKING_TIME,
+                message='Максимальное время приготовления '
+                        f'- {MAX_COOKING_TIME} мин.'
             )
-        ]
+        )
     )
     pub_date = models.DateTimeField(
-        verbose_name='Дата и время создания',
+        'Дата и время создания',
         auto_now_add=True,
         db_index=True
     )
@@ -132,23 +131,21 @@ class Tag(models.Model):
     """Модель тега."""
 
     name = models.CharField(
-        verbose_name='Название',
+        'Название',
         max_length=MAX_LENGTH_NAME,
         unique=True
     )
     slug = models.SlugField(
-        verbose_name='Слаг',
+        'Слаг',
         max_length=MAX_LENGTH_SLUG,
         null=True,
         unique=True,
-        validators=[validate_slug]
     )
 
     class Meta:
         ordering = ('name', )
         verbose_name = 'Тег'
         verbose_name_plural = 'Теги'
-        default_related_name = 'tags'
 
     def __str__(self):
         """Возвращает строковое представление объекта тега."""
@@ -159,12 +156,12 @@ class Ingredient(models.Model):
     """Модель ингредиента."""
 
     name = models.CharField(
-        verbose_name='Название',
+        'Название',
         max_length=MAX_LENGTH_NAME,
         unique=True
     )
     measurement_unit = models.CharField(
-        verbose_name='Единица измерения',
+        'Единица измерения',
         max_length=MAX_LENGTH_NAME,
     )
 
@@ -172,7 +169,12 @@ class Ingredient(models.Model):
         ordering = ('name', )
         verbose_name = 'Ингредиент'
         verbose_name_plural = 'Ингредиенты'
-        default_related_name = 'ingredients'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('name', 'measurement_unit'),
+                name='unique_name_measurement_unit'
+            ),
+        )
 
     def __str__(self):
         """Возвращает строковое представление объекта ингредиента."""
@@ -182,6 +184,7 @@ class Ingredient(models.Model):
 
 class RecipeIngredient(models.Model):
     """Промежуточная модель для рецептов и ингредиентов."""
+
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
@@ -196,63 +199,37 @@ class RecipeIngredient(models.Model):
 
     )
     amount = models.PositiveSmallIntegerField(
-        verbose_name='Количество',
-        validators=[
+        'Количество',
+        validators=(
             MinValueValidator(
-                MIN_NUMBERS_OF_ELEMENTS
+                MIN_NUMBERS_OF_ELEMENTS,
+                message=f'Рецепт должен состоять '
+                        f'минимум из {MIN_NUMBERS_OF_ELEMENTS} '
+                        'ингридиента(-ов).'
             ),
             MaxValueValidator(
-                MAX_NUMBERS_OF_ELEMENTS
+                MAX_NUMBERS_OF_ELEMENTS,
+                message=f'Рецепт должен состоять '
+                        f'максимум из {MAX_NUMBERS_OF_ELEMENTS} '
+                        'ингридиента(-ов).'
             ),
-        ]
+        )
     )
 
     class Meta:
         verbose_name = 'ингредиент в рецепте'
         verbose_name_plural = 'Ингредиенты в рецептах'
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
                 fields=('recipe', 'ingredient'),
                 name='unique_recipe_ingredient'
-            )
-        ]
+            ),
+        )
 
     def __str__(self):
         """Возвращает строковое представление объекта ингредиента в рецепте."""
-        return (f'{self.ingredient[:MAX_LENGTH_FOR_STR]} '
-                f'в рецепте "{self.recipe[:MAX_LENGTH_FOR_STR]}"')
-
-
-class FavoriteRecipe(models.Model):
-    """Модель избранного."""
-
-    user = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='Пользователь'
-    )
-    recipe = models.ForeignKey(
-        Recipe,
-        verbose_name='Рецепт',
-        on_delete=models.CASCADE
-    )
-
-    class Meta:
-        verbose_name = 'рецепт из избранного'
-        verbose_name_plural = 'Рецепты из избранного'
-        default_related_name = 'favorites'
-        constraints = [
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_user_favorite_recipe'
-            )
-        ]
-
-    def __str__(self):
-        """Возвращает строковое представление объекта избранного."""
-        return (f'{self.user[:MAX_LENGTH_FOR_STR]}'
-                f' добавил {self.recipe[:MAX_LENGTH_FOR_STR]}'
-                f' в избранное')
+        return (f'{self.ingredient} '
+                f'в рецепте "{self.recipe}"')
 
 
 class Subscription(models.Model):
@@ -282,21 +259,25 @@ class Subscription(models.Model):
             ),
         )
 
+    def clean(self):
+        if self.follower == self.author:
+            raise ValidationError(
+                {'author': 'Нельзя подписаться на самого себя'}
+            )
+
     def __str__(self):
         """Возвращает строковое представление объекта избранного."""
-        return (f'{self.follower[:MAX_LENGTH_FOR_STR]}'
-                f' подписался на {self.author[:MAX_LENGTH_FOR_STR]}')
+        return f'{self.follower} подписался на {self.author}'
 
 
-class ShoppingCart(models.Model):
-    """Модель списка покупок."""
+class BaseRecipeUserModel(models.Model):
+    """Абстрактная модель для списка покупок и избранного."""
 
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         verbose_name='Пользователь'
     )
-
     recipe = models.ForeignKey(
         Recipe,
         verbose_name='Рецепт',
@@ -304,19 +285,47 @@ class ShoppingCart(models.Model):
     )
 
     class Meta:
+        abstract = True
         ordering = ('user',)
-        verbose_name = 'список покупок'
-        verbose_name_plural = 'Списки покупок'
         constraints = (
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
                 name='unique_user_recipe'
             ),
         )
+
+
+class ShoppingCart(BaseRecipeUserModel):
+    """Модель списка покупок."""
+
+    class Meta(BaseRecipeUserModel.Meta):
+        verbose_name = 'список покупок'
+        verbose_name_plural = 'Списки покупок'
         default_related_name = 'shopping_cart'
 
     def __str__(self):
         """Возвращает строковое представление объекта списка покупок."""
-        return (f'{self.user[:MAX_LENGTH_FOR_STR]}'
-                f' добавил {self.recipe[:MAX_LENGTH_FOR_STR]}'
+        return (f'{self.user}'
+                f' добавил {self.recipe}'
                 f' в список покупок')
+
+
+class FavoriteRecipe(BaseRecipeUserModel):
+    """Модель избранного."""
+
+    class Meta(BaseRecipeUserModel.Meta):
+        verbose_name = 'рецепт из избранного'
+        verbose_name_plural = 'Рецепты из избранного'
+        default_related_name = 'favorites'
+        constraints = (
+            models.UniqueConstraint(
+                fields=('user', 'recipe'),
+                name='unique_user_favorite_recipe'
+            ),
+        )
+
+    def __str__(self):
+        """Возвращает строковое представление объекта избранного."""
+        return (f'{self.user}'
+                f' добавил {self.recipe}'
+                f' в избранное')

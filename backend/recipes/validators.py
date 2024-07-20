@@ -29,14 +29,3 @@ class ValidateUsername:
 
     def __call__(self, value):
         return self.validate_username(value)
-
-
-def validate_slug(slug):
-    """Проверка слага на соответствие шаблону."""
-    pattern = r'^[-a-zA-Z0-9_]+$'
-    if not re.match(pattern, slug):
-        raise ValueError(
-            'Недопустимое название Slug! '
-            'Слаг может содержать только целые числа, '
-            'буквы или подчеркивания.'
-        )
