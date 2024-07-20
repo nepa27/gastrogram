@@ -116,9 +116,9 @@ class BaseUserViewSet(UserViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         data = UserSubscriptionSerializer(
-                serializer.instance.author,
-                context={'request': request}
-            ).data
+            serializer.instance.author,
+            context={'request': request}
+        ).data
         data[
             'recipes_count'
         ] = serializer.instance.author.recipes.count()

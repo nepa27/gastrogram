@@ -54,8 +54,8 @@ class UserSerializer(serializers.ModelSerializer):
         """Метод проверки подписки"""
         request = self.context['request']
         if request:
-            return (request and
-                    request.user.is_authenticated
+            return (request
+                    and request.user.is_authenticated
                     and object.author.filter(
                         follower=request.user
                     ).exists()
