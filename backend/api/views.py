@@ -7,15 +7,14 @@ ShoppingCart, Subscription, Tag.
 """
 import os
 
-from django.db.models import F, Sum
+from django.db.models import Exists, F, Sum, OuterRef
 from django.db.models.aggregates import Count
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from djoser.views import UserViewSet
+from djoser.views import UserViewSet as BaseUserViewSet
 from rest_framework import status
 from rest_framework.decorators import action
-from rest_framework.exceptions import NotAuthenticated
 from rest_framework.permissions import (
     IsAuthenticated,
     IsAuthenticatedOrReadOnly,
@@ -52,7 +51,7 @@ from recipes.models import (
 )
 
 
-class BaseUserViewSet(UserViewSet):
+class UserViewSet(BaseUserViewSet):
     """
     ViewSet для работы с пользователями.
 
@@ -66,14 +65,9 @@ class BaseUserViewSet(UserViewSet):
     pagination_class = BasePagination
 
     def get_permissions(self):
-        if self.action == "me":
+        if self.action == 'me':
             self.permission_classes = (IsAuthenticated,)
         return super().get_permissions()
-
-    def get_serializer_class(self):
-        if self.action == "me":
-            return UserSerializer
-        return super().get_serializer_class()
 
     @action(
         methods=('PUT',),
@@ -111,19 +105,13 @@ class BaseUserViewSet(UserViewSet):
     def subscribe(self, request, id):
         """Метод для управления подписками."""
         serializer = SubscriptionSerializer(
-            data={'follower': request.user.id, 'author': id}
+            data={'follower': request.user.id, 'author': id},
+            context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        data = UserSubscriptionSerializer(
-            serializer.instance.author,
-            context={'request': request}
-        ).data
-        data[
-            'recipes_count'
-        ] = serializer.instance.author.recipes.count()
         return Response(
-            data,
+            serializer.data,
             status=status.HTTP_201_CREATED
         )
 
@@ -202,27 +190,25 @@ class RecipeViewSet(ModelViewSet):
     filterset_class = RecipeFilter
     pagination_class = BasePagination
 
-    # Попытался сделать подзапросы (замечание стр.326 сериализаторы)
-    # def get_queryset(self):
-    #     queryset = super().get_queryset()
-    #     return queryset.annotate(
-    #         is_favorited=Exists(
-    #             FavoriteRecipe.objects.filter(
-    #                 recipe=OuterRef('pk'),
-    #                 user=self.request.user)
-    #         ),
-    #         is_in_shopping_cart=Exists(
-    #             ShoppingCart.objects.filter(
-    #                 recipe=OuterRef('pk'),
-    #                 user=self.request.user)
-    #         )
-    #     )
-
-    def create(self, request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            raise NotAuthenticated('Только зарегистрированные пользователи '
-                                   'могут создать рецепт!')
-        return super().create(request, *args, **kwargs)
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = (
+            self.request.user
+        ) if self.request.user.is_authenticated else None
+        return queryset.annotate(
+            is_favorited=Exists(
+                FavoriteRecipe.objects.filter(
+                    recipe__pk=OuterRef('pk'),
+                    user=user
+                )
+            ),
+            is_in_shopping_cart=Exists(
+                ShoppingCart.objects.filter(
+                    recipe__pk=OuterRef('pk'),
+                    user=user
+                )
+            )
+        )
 
     @action(
         detail=True,
@@ -275,7 +261,7 @@ class RecipeViewSet(ModelViewSet):
         ).values(
             name=F('ingredient__name'),
             measurement_unit=F('ingredient__measurement_unit')
-        ).annotate(sum=Sum('amount'))
+        ).annotate(sum=Sum('amount')).order_by('name')
         shopping_cart = self.ingredients_to_txt(ingredients)
         return FileResponse(
             shopping_cart,
@@ -300,21 +286,17 @@ class RecipeViewSet(ModelViewSet):
     @staticmethod
     def add_to(current_serializer, request, pk):
         """Метод для добавления рецептов."""
-        if Recipe.objects.filter(pk=pk).exists():
-            serializer = current_serializer(
-                data={
-                    'user': request.user.id,
-                    'recipe': pk
-                }
-            )
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(
-                serializer.data,
-                status=status.HTTP_201_CREATED
-            )
+        serializer = current_serializer(
+            data={
+                'user': request.user.id,
+                'recipe': pk
+            }
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(
-            status=status.HTTP_404_NOT_FOUND
+            serializer.data,
+            status=status.HTTP_201_CREATED
         )
 
     @staticmethod

@@ -50,12 +50,7 @@ class RecipeIngredientInline(admin.TabularInline):
     """Встроенный класс для редактирования ингредиентов рецепта."""
     model = Recipe.ingredients.through
     extra = 1
-
-
-class RecipeTagInline(admin.TabularInline):
-    """Встроенный класс для редактирования тегов рецепта."""
-    model = Recipe.tags.through
-    extra = 1
+    min_num = 1
 
 
 @admin.register(Recipe)
@@ -75,7 +70,7 @@ class RecipeAdmin(admin.ModelAdmin):
         'name'
     )
     list_filter = ('tags',)
-    inlines = [RecipeIngredientInline, RecipeTagInline]
+    inlines = (RecipeIngredientInline, )
 
     @admin.display(description='Ингредиенты')
     def get_ingredients(self, obj):

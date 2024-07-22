@@ -15,8 +15,8 @@ from recipes_backend.constants import (
     MAX_LENGTH_SLUG,
     MAX_COOKING_TIME,
     MIN_COOKING_TIME,
-    MIN_NUMBERS_OF_ELEMENTS,
-    MAX_NUMBERS_OF_ELEMENTS
+    MIN_WEIGHT,
+    MAX_WEIGHT
 )
 
 
@@ -24,6 +24,12 @@ class User(AbstractUser):
     """Модель пользователя приложения."""
 
     USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = (
+        'username',
+        'first_name',
+        'last_name',
+        'password'
+    )
     username = models.CharField(
         'Имя пользователя',
         unique=True,
@@ -49,15 +55,8 @@ class User(AbstractUser):
         upload_to='avatars/',
     )
 
-    REQUIRED_FIELDS = (
-        'username',
-        'first_name',
-        'last_name',
-        'password'
-    )
-
     class Meta:
-        ordering = ('id',)
+        ordering = ('username', 'email')
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
@@ -202,18 +201,16 @@ class RecipeIngredient(models.Model):
         'Количество',
         validators=(
             MinValueValidator(
-                MIN_NUMBERS_OF_ELEMENTS,
-                message=f'Рецепт должен состоять '
-                        f'минимум из {MIN_NUMBERS_OF_ELEMENTS} '
-                        'ингридиента(-ов).'
+                MIN_WEIGHT,
             ),
             MaxValueValidator(
-                MAX_NUMBERS_OF_ELEMENTS,
-                message=f'Рецепт должен состоять '
-                        f'максимум из {MAX_NUMBERS_OF_ELEMENTS} '
-                        'ингридиента(-ов).'
+                MAX_WEIGHT,
             ),
-        )
+        ),
+        error_messages={
+            'min_value': f'Минимальный вес - {MIN_WEIGHT}',
+            'max_value': f'Максимальный вес - {MAX_WEIGHT}',
+        }
     )
 
     class Meta:
@@ -290,9 +287,15 @@ class BaseRecipeUserModel(models.Model):
         constraints = (
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
-                name='unique_user_recipe'
+                name='%s_unique_user_recipe'
             ),
         )
+
+    def __str__(self):
+        """Возвращает строковое представление объекта."""
+        return (f'{self.user}'
+                f' добавил {self.recipe}'
+                f' в {self._meta.verbose_name}')
 
 
 class ShoppingCart(BaseRecipeUserModel):
@@ -303,12 +306,6 @@ class ShoppingCart(BaseRecipeUserModel):
         verbose_name_plural = 'Списки покупок'
         default_related_name = 'shopping_cart'
 
-    def __str__(self):
-        """Возвращает строковое представление объекта списка покупок."""
-        return (f'{self.user}'
-                f' добавил {self.recipe}'
-                f' в список покупок')
-
 
 class FavoriteRecipe(BaseRecipeUserModel):
     """Модель избранного."""
@@ -317,15 +314,3 @@ class FavoriteRecipe(BaseRecipeUserModel):
         verbose_name = 'рецепт из избранного'
         verbose_name_plural = 'Рецепты из избранного'
         default_related_name = 'favorites'
-        constraints = (
-            models.UniqueConstraint(
-                fields=('user', 'recipe'),
-                name='unique_user_favorite_recipe'
-            ),
-        )
-
-    def __str__(self):
-        """Возвращает строковое представление объекта избранного."""
-        return (f'{self.user}'
-                f' добавил {self.recipe}'
-                f' в избранное')

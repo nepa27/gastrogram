@@ -6,15 +6,15 @@
 ShoppingCart, Subscription, Tag в рамках API Django REST Framework.
 
 """
-from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
 from recipes_backend.constants import (
-    MAX_NUMBERS_OF_ELEMENTS,
-    MIN_NUMBERS_OF_ELEMENTS,
-    MIN_COOKING_TIME
+    MAX_WEIGHT,
+    MIN_WEIGHT,
+    MIN_COOKING_TIME,
+    MAX_COOKING_TIME
 )
 from recipes.models import (
     User,
@@ -53,14 +53,12 @@ class UserSerializer(serializers.ModelSerializer):
     def get_is_subscribed(self, object):
         """Метод проверки подписки"""
         request = self.context['request']
-        if request:
-            return (request
-                    and request.user.is_authenticated
-                    and object.author.filter(
-                        follower=request.user
-                    ).exists()
-                    )
-        return False
+        return (request
+                and request.user.is_authenticated
+                and object.author.filter(
+                    follower=request.user
+                ).exists()
+                )
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
@@ -117,6 +115,7 @@ class UserSubscriptionSerializer(UserSerializer):
         return RecipeInSubscriptionSerializer(
             recipes,
             many=True,
+            context=self.context,
             read_only=True
         ).data
 
@@ -160,8 +159,16 @@ class IngredientRecipeSerializer(serializers.ModelSerializer):
         queryset=Ingredient.objects.all()
     )
     amount = serializers.IntegerField(
-        min_value=MIN_NUMBERS_OF_ELEMENTS,
-        max_value=MAX_NUMBERS_OF_ELEMENTS
+        min_value=MIN_WEIGHT,
+        max_value=MAX_WEIGHT,
+        error_messages={
+            'min_value': RecipeIngredient._meta.get_field(
+                'amount'
+            ).error_messages['min_value'],
+            'max_value': RecipeIngredient._meta.get_field(
+                'amount'
+            ).error_messages['max_value'],
+        }
     )
 
     class Meta:
@@ -207,14 +214,17 @@ class BaseFavoriteShopingCartSerializer(serializers.ModelSerializer):
     class Meta:
         abstract = True
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = self.Meta.model
+
     def validate(self, data):
         """Базовая валидация для моделей списка покупок и избранного."""
-        queryset = self.Meta.model.objects.all()
-        if queryset.filter(
+        if self.model.objects.filter(
                 user=data['user'],
                 recipe=data['recipe']
         ).exists():
-            model_verbose_name = self.Meta.model._meta.verbose_name
+            model_verbose_name = self.model._meta.verbose_name
             raise serializers.ValidationError(
                 f'{model_verbose_name} уже добавлен!'
             )
@@ -286,6 +296,14 @@ class SubscriptionSerializer(serializers.ModelSerializer):
             )
         return data
 
+    def to_representation(self, instance):
+        data = UserSubscriptionSerializer(
+            instance.author,
+            context=self.context
+        ).data
+        data['recipes_count'] = instance.author.recipes.count()
+        return data
+
 
 class RecipeInSubscriptionSerializer(serializers.ModelSerializer):
     """
@@ -323,8 +341,14 @@ class RecipeReadSerializer(serializers.ModelSerializer):
         many=True,
         read_only=True
     )
-    is_favorited = serializers.SerializerMethodField(read_only=True)
-    is_in_shopping_cart = serializers.SerializerMethodField(read_only=True)
+    is_favorited = serializers.BooleanField(
+        read_only=True,
+        default=False
+    )
+    is_in_shopping_cart = serializers.BooleanField(
+        read_only=True,
+        default=False
+    )
 
     class Meta:
         model = Recipe
@@ -340,43 +364,6 @@ class RecipeReadSerializer(serializers.ModelSerializer):
             'text',
             'cooking_time'
         )
-
-    @staticmethod
-    def get_ingredients(object):
-        """Метод получения ингредиентов."""
-        recipe = get_object_or_404(
-            Recipe,
-            id=object.id
-        )
-        ingredients = recipe.recipes.all()
-        return IngredientRecipeAllSerializer(
-            ingredients,
-            many=True
-        ).data
-
-    def get_is_favorited(self, object):
-        """Метод проверки на добавление в избранное."""
-        request = self.context['request']
-        if request:
-            return (request
-                    and request.user.is_authenticated
-                    and request.user.favorites.filter(
-                        recipe=object
-                    ).exists()
-                    )
-        return False
-
-    def get_is_in_shopping_cart(self, object):
-        """Метод проверки на присутствие в корзине."""
-        request = self.context['request']
-        if request:
-            return (request
-                    and request.user.is_authenticated
-                    and request.user.shopping_cart.filter(
-                        recipe=object
-                    ).exists()
-                    )
-        return False
 
 
 class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
@@ -402,6 +389,7 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     )
     cooking_time = serializers.IntegerField(
         min_value=MIN_COOKING_TIME,
+        max_value=MAX_COOKING_TIME
     )
 
     class Meta:
@@ -433,38 +421,38 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
         """Метод валидации тегов и ингредиентов."""
         if not data.get('tags'):
             raise serializers.ValidationError(
-                'Отсутствует поле "tags"!'
+                {'tags': 'Обязательное поле!'}
             )
         tags_data = data.get('tags')
         if len(tags_data) != len(set(tags_data)):
             raise serializers.ValidationError(
-                'Тэг уже добавлен!'
+                {'tags': 'Тэг уже добавлен!'}
             )
         if not data.get('ingredients'):
             raise serializers.ValidationError(
-                'Отсутствует поле "ingredients"!'
+                {'ingredients': 'Обязательное поле!'}
             )
         ingredients_data = data.get('ingredients')
         if not ingredients_data:
             raise serializers.ValidationError(
-                'Минимальное количество ингредиентов - 1!'
+                {'ingredients': 'Минимальное количество ингредиентов - 1!'}
             )
         if len(ingredients_data) != len(set(
                 [ingredient.get('id') for ingredient
                  in ingredients_data]
         )):
             raise serializers.ValidationError(
-                'Ингредиент уже добавлен!'
+                {'ingredients': 'Ингредиент уже добавлен!'}
             )
-
+        # Убрал из create и перенёс сюда. Без этих строк Постман ругается
+        if not data.get('image'):
+            raise serializers.ValidationError(
+                {'image': 'Обязательное поле!'}
+            )
         return data
 
     def create(self, validated_data):
         """Метод создания рецептов."""
-        if not validated_data.get('image'):
-            raise serializers.ValidationError(
-                {'image': 'Обязательное поле!'}
-            )
         author = self.context.get('request').user
         tags_data = validated_data.pop('tags')
         ingredients_data = validated_data.pop('ingredients')
@@ -479,22 +467,12 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         """Метод обновления рецептов."""
         recipe = instance
-        if not validated_data.get('image'):
-            raise serializers.ValidationError(
-                {'image': 'Обязательное поле!'}
-            )
-        if not validated_data.get('ingredients'):
-            raise serializers.ValidationError(
-                {'ingredients': 'Обязательное поле!'}
-            )
         tags_data = validated_data.pop('tags', [])
         ingredients_data = validated_data.pop('ingredients', [])
-        instance = super().update(instance, validated_data)
         instance.tags.set(tags_data)
         instance.ingredients.clear()
         self.add_ingredients(ingredients_data, recipe)
-        instance.save()
-        return instance
+        return super().update(instance, validated_data)
 
     def to_representation(self, recipe):
         """
