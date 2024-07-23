@@ -20,7 +20,8 @@ urlpatterns = [
     path('api/docs/', TemplateView.as_view(template_name='redoc.html')),
     path('api/docs/openapi-schema.yml',
          serve,
-         {'document_root': settings.BASE_DIR / 'docs', 'path': 'openapi-schema.yml'})
+         {'document_root': settings.BASE_DIR / 'docs',
+          'path': 'openapi-schema.yml'})
 ]
 
 if settings.DEBUG:
