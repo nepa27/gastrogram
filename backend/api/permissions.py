@@ -10,9 +10,10 @@ class AuthorOrReadOnly(permissions.BasePermission):
     """
     def has_permission(self, request, view):
         """Проверяет, является ли пользователь аутентифицированным."""
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return request.user.is_authenticated
+        return (
+                request.method in permissions.SAFE_METHODS
+                or request.user.is_authenticated
+        )
 
     def has_object_permission(self, request, view, obj):
         """Определяет, имеет ли пользователь разрешение на доступ к объекту."""

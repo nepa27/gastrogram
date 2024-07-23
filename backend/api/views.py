@@ -91,7 +91,6 @@ class UserViewSet(BaseUserViewSet):
 
     @avatar.mapping.delete
     def delete_avatar(self, request):
-        request.user.avatar = None
         request.user.save()
         return Response(
             status=status.HTTP_204_NO_CONTENT
@@ -192,23 +191,23 @@ class RecipeViewSet(ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        user = (
-            self.request.user
-        ) if self.request.user.is_authenticated else None
-        return queryset.annotate(
-            is_favorited=Exists(
-                FavoriteRecipe.objects.filter(
-                    recipe__pk=OuterRef('pk'),
-                    user=user
-                )
-            ),
-            is_in_shopping_cart=Exists(
-                ShoppingCart.objects.filter(
-                    recipe__pk=OuterRef('pk'),
-                    user=user
+        if self.request.user.is_authenticated:
+            user = self.request.user
+            queryset = queryset.annotate(
+                is_favorited=Exists(
+                    FavoriteRecipe.objects.filter(
+                        recipe__pk=OuterRef('pk'),
+                        user=user
+                    )
+                ),
+                is_in_shopping_cart=Exists(
+                    ShoppingCart.objects.filter(
+                        recipe__pk=OuterRef('pk'),
+                        user=user
+                    )
                 )
             )
-        )
+        return queryset
 
     @action(
         detail=True,

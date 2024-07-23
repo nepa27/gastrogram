@@ -287,7 +287,7 @@ class BaseRecipeUserModel(models.Model):
         constraints = (
             models.UniqueConstraint(
                 fields=('user', 'recipe'),
-                name='%s_unique_user_recipe'
+                name='%(class)s_unique_user_recipe'
             ),
         )
 

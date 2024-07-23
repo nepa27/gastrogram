@@ -57,8 +57,7 @@ class UserSerializer(serializers.ModelSerializer):
                 and request.user.is_authenticated
                 and object.author.filter(
                     follower=request.user
-                ).exists()
-                )
+                ).exists())
 
 
 class UserAvatarSerializer(serializers.ModelSerializer):
@@ -224,9 +223,8 @@ class BaseFavoriteShopingCartSerializer(serializers.ModelSerializer):
                 user=data['user'],
                 recipe=data['recipe']
         ).exists():
-            model_verbose_name = self.model._meta.verbose_name
             raise serializers.ValidationError(
-                f'{model_verbose_name} уже добавлен!'
+                f'{self.model._meta.verbose_name} уже добавлен!'
             )
         return data
 
@@ -444,7 +442,6 @@ class RecipeCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'ingredients': 'Ингредиент уже добавлен!'}
             )
-        # Убрал из create и перенёс сюда. Без этих строк Постман ругается
         if not data.get('image'):
             raise serializers.ValidationError(
                 {'image': 'Обязательное поле!'}
