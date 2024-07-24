@@ -69,6 +69,11 @@ class UserViewSet(BaseUserViewSet):
             self.permission_classes = (IsAuthenticated,)
         return super().get_permissions()
 
+    def get_serializer_class(self):
+        if self.action == 'me':
+            return UserSerializer
+        return super().get_serializer_class()
+
     @action(
         methods=('PUT',),
         detail=False,
