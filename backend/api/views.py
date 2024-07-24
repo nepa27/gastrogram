@@ -82,8 +82,7 @@ class UserViewSet(BaseUserViewSet):
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        request.user.avatar = serializer.validated_data['avatar']
-        request.user.save()
+        serializer.save()
         return Response(
             {'avatar': request.user.avatar.url},
             status=status.HTTP_200_OK
@@ -91,6 +90,7 @@ class UserViewSet(BaseUserViewSet):
 
     @avatar.mapping.delete
     def delete_avatar(self, request):
+        request.user.avatar.delete()
         request.user.save()
         return Response(
             status=status.HTTP_204_NO_CONTENT
