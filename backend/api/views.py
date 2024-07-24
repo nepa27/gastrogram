@@ -78,6 +78,7 @@ class UserViewSet(BaseUserViewSet):
     def avatar(self, request):
         """Метод для работы с аватаром."""
         serializer = UserAvatarSerializer(
+            instance=request.user,
             data=request.data,
             context={'request': request}
         )
