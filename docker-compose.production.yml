@@ -32,8 +32,8 @@ services:
     image: nepa27/foodgram_gateway
     env_file: .env
     volumes:
-      - static:/staticfiles/
-      - media:/mediafiles/
+      - static:/static
+      - media:/app/media
     ports:
       - 8001:80
     depends_on:
