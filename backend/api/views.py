@@ -70,28 +70,31 @@ class UserViewSet(BaseUserViewSet):
         return super().get_permissions()
 
     @action(
-        methods=('PUT', 'DELETE'),
+        methods=('PUT',),
         detail=False,
         permission_classes=(IsAuthenticated,),
         url_path='me/avatar'
     )
     def avatar(self, request):
-        if request.method == 'DELETE':
-            request.user.avatar = None
-            request.user.save()
-            return Response(
-                status=status.HTTP_204_NO_CONTENT
-            )
+        """Метод для работы с аватаром."""
         serializer = UserAvatarSerializer(
+            instance=request.user,
             data=request.data,
             context={'request': request}
         )
         serializer.is_valid(raise_exception=True)
-        request.user.avatar = serializer.validated_data['avatar']
-        request.user.save()
+        serializer.save()
         return Response(
             {'avatar': request.user.avatar.url},
             status=status.HTTP_200_OK
+        )
+
+    @avatar.mapping.delete
+    def delete_avatar(self, request):
+        request.user.avatar.delete()
+        request.user.save()
+        return Response(
+            status=status.HTTP_204_NO_CONTENT
         )
 
     @action(
