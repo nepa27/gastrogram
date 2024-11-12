@@ -1,5 +1,5 @@
-[![Main Taski workflow](https://github.com/nepa27/foodgram/actions/workflows/main.yml/badge.svg)](https://github.com/nepa27/foodgram/actions/workflows/main.yml)
-# Проект Foodgram
+[![Main Taski workflow](https://github.com/nepa27/gastrogram/actions/workflows/main.yml/badge.svg)](https://github.com/nepa27/gastrogram/actions/workflows/main.yml)
+# Проект Gastrogram
 [![Python](https://img.shields.io/badge/-Python-464646?style=flat-square&logo=Python)](https://www.python.org/)
 [![Django](https://img.shields.io/badge/-Django-464646?style=flat-square&logo=Django)](https://www.djangoproject.com/)
 [![Django REST Framework](https://img.shields.io/badge/-Django%20REST%20Framework-464646?style=flat-square&logo=Django%20REST%20Framework)](https://www.django-rest-framework.org/)
@@ -34,10 +34,10 @@
     ssh -i PATH_TO_SSH_KEY/SSH_KEY_NAME YOUR_USERNAME@SERVER_IP_ADDRESS 
     ```
 
-2. Создайте на сервере директорию `foodgram`:
+2. Создайте на сервере директорию `gastrogram`:
 
     ```
-    mkdir foodgram
+    mkdir gastrogram
     ```
 
 3. Установите Docker Compose на сервер:
@@ -50,10 +50,10 @@
     sudo apt install docker-compose
     ```
 
-4. Скопируйте файлы `docker-compose.production.yml` и `.env` в директорию `foodgram/` на сервере:
+4. Скопируйте файлы `docker-compose.production.yml` и `.env` в директорию `gastrogram/` на сервере:
 
     ```
-    scp -i PATH_TO_SSH_KEY/SSH_KEY_NAME docker-compose.production.yml YOUR_USERNAME@SERVER_IP_ADDRESS:/home/YOUR_USERNAME/foodgram/docker-compose.production.yml
+    scp -i PATH_TO_SSH_KEY/SSH_KEY_NAME docker-compose.production.yml YOUR_USERNAME@SERVER_IP_ADDRESS:/home/YOUR_USERNAME/gastrogram/docker-compose.production.yml
     ```
     
     Где:
@@ -65,15 +65,15 @@
 5. Запустите Docker Compose в режиме демона:
 
     ```
-    sudo docker-compose -f /home/YOUR_USERNAME/foodgram/docker-compose.production.yml up -d
+    sudo docker-compose -f /home/YOUR_USERNAME/gastrogram/docker-compose.production.yml up -d
     ```
 
 6. Выполните миграции, соберите статические файлы бэкенда и скопируйте их в `/backend_static/static/`:
 
     ```
-    sudo docker-compose -f /home/YOUR_USERNAME/foodgram/docker-compose.production.yml exec backend python manage.py migrate
-    sudo docker-compose -f /home/YOUR_USERNAME/foodgram/docker-compose.production.yml exec backend python manage.py collectstatic
-    sudo docker-compose -f /home/YOUR_USERNAME/foodgram/docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
+    sudo docker-compose -f /home/YOUR_USERNAME/gastrogram/docker-compose.production.yml exec backend python manage.py migrate
+    sudo docker-compose -f /home/YOUR_USERNAME/gastrogram/docker-compose.production.yml exec backend python manage.py collectstatic
+    sudo docker-compose -f /home/YOUR_USERNAME/gastrogram/docker-compose.production.yml exec backend cp -r /app/collected_static/. /backend_static/static/
     ```
 
 7. Откройте конфигурационный файл Nginx в редакторе nano:
@@ -115,7 +115,7 @@
 1. Файл workflow уже написан и находится в директории:
 
     ```
-    foodgram/.github/workflows/main.yml
+    gastrogram/.github/workflows/main.yml
     ```
 
 2. Для адаптации его к вашему серверу добавьте секреты в GitHub Actions:
@@ -134,10 +134,10 @@
 
 ### Для успешного развертывания проекта необходимо в главной директории создать файл .env, где будут указаны следующие параметры:
 
-- POSTGRES_USER=foodgram_user
-- POSTGRES_PASSWORD=foodgram_password
-- POSTGRES_DB=foodgram_db
-- DB_NAME=foodgram
+- POSTGRES_USER=gastrogram_user
+- POSTGRES_PASSWORD=gastrogram_password
+- POSTGRES_DB=gastrogram_db
+- DB_NAME=gastrogram
 - DB_HOST=db
 - DB_PORT=5432
 - SECRET_KEY=somesecretkey
